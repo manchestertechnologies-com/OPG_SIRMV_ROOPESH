@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/paper.css">
+<link rel="stylesheet" href="css/wizard.css">
+</head>
+<body>
+<!-- Layout of the Campus ERP: icon rail · red top bar · page header, step tabs and cards in the content -->
+<aside class="rail" id="side">
+  <div class="rail-logo"><span class="brand-mark">PS</span></div>
+  <button class="hamb" id="hamb" title="Collapse menu" aria-label="Toggle menu"></button>
+  <nav class="rail-nav" id="side-nav"></nav>
+</aside>
+<div class="main-col">
+  <header class="mt-navbar">
+    <span class="brand-mark sm">PS</span>
+    <div class="nb-brand"><div><span class="nb-name">Paper Studio</span> <span class="nb-chip">Question Suite</span></div>
+      <div class="nb-sub">Questions · 8-Set Papers · Answer Keys</div></div>
+    <span class="sp"></span>
+    <span id="ocr-status" class="ocr-status"></span>
+  </header>
+  <main id="main">
+    <div class="page-head">
+      <a id="page-back" class="back-btn" href="#add" title="Back"></a>
+      <div><h1 id="page-title">Questions</h1><p id="page-crumbs" class="crumbs"></p></div>
+    </div>
+    <nav class="steps" id="tabs"></nav>
+    <div id="view"></div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

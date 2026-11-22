@@ -1,0 +1,13 @@
+# Web server (small)
+fastapi>=0.115
+uvicorn>=0.30
+pillow>=10.4
+numpy>=1.26
+psutil>=5.9
+pg8000>=1.31            # question databases (pure Python: no DLLs to install)
+python-dotenv>=1.0
+
+# Offline OCR model, installed separately (large, CPU build):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install "transformers>=5.2" "jinja2>=3.1.6"
+# The GLM-OCR model (~2.6 GB) downloads on the first start. No API key, no internet after that.
