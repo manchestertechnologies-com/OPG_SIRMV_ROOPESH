@@ -9,6 +9,8 @@ import { generateSets, syncSets, reshuffleSet, swapInSet, moveInSet, keyText, se
 import { SAMPLE_QUESTIONS } from "./samples.js";
 import { icon } from "./icons.js";
 import { viewWizard } from "./wizard.js";
+import { initTests } from "./tests.js";
+import { viewSyllabus, viewTable } from "./syllabus-table.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const view = $("#view");
@@ -36,11 +38,9 @@ function modal(title, bodyHTML, { wide } = {}) {
 
 // ======================================================================== shell: sidebar, banner, tabs
 const SIDE = [
-  { r: "add", label: "New", ic: "plus", match: ["add"] },
-  { r: "bank", label: "Bank", ic: "bank", match: ["bank"] },
-  { r: "db", label: "Database", ic: "layers", match: ["db"] },
-  { r: "create", label: "Create", ic: "doc", match: ["create"] },
-  { r: "papers", label: "Papers", ic: "papers", match: ["papers", "paper"] },
+  { r: "tests/unpublished", label: "Tests", ic: "papers", match: ["tests", "test", "paper", "papers"] },
+  { r: "bank", label: "Questions", ic: "bank", match: ["add", "bank", "db", "syllabus", "table"] },
+  { r: "create", label: "Auto paper", ic: "doc", match: ["create"] },
 ];
 $("#hamb").innerHTML = icon("menu", 18);
 $("#hamb").onclick = () => document.body.classList.toggle("rail-mini");
@@ -66,10 +66,11 @@ function shell(title, back, tabs) {
   }
 }
 const questionTabs = (on) => [
-  { label: "New", ic: "plus", href: "#add", on: on === "add" },
   { label: "View", ic: "eye", href: "#bank", on: on === "bank" },
+  { label: "New", ic: "plus", href: "#add", on: on === "add" },
   { label: "Database", ic: "layers", href: "#db", on: on === "db" },
-  { label: "Papers", ic: "papers", href: "#papers" },
+  { label: "Syllabus", ic: "list", href: "#syllabus", on: on === "syllabus" },
+  { label: "Table", ic: "doc", href: "#table", on: on === "table" },
 ];
 
 // ======================================================================== College database
@@ -182,28 +183,59 @@ async function viewDb() {
 }
 
 // ======================================================================== routing
-const routes = { add: viewAdd, bank: viewBank, db: viewDb, create: (a) => viewWizard(view, { shell, toast, store, newPaper }), papers: viewPapers, paper: viewPaper };
+const T = initTests({ view, shell, toast, store, modal, newPaper: (...a) => newPaper(...a), editQuestion: (...a) => editQuestion(...a) });
+const routes = {
+  tests: T.tests, test: T.test, add: viewAdd, bank: viewBank, db: viewDb,
+  syllabus: () => viewSyllabus(view, { shell, tabs: questionTabs("syllabus") }),
+  table: () => viewTable(view, { shell, tabs: questionTabs("table"), toast }),
+  create: (a) => viewWizard(view, { shell, toast, store, newPaper }),
+  papers: () => { location.hash = "tests/published"; }, paper: viewPaper,
+};
 async function go() {
-  const [name, arg] = (location.hash.slice(1) || "add").split("/");
+  const [name, arg, arg2] = (location.hash.slice(1) || "tests/unpublished").split("/");
   $("#side-nav").innerHTML = SIDE.map((s) => `<a href="#${s.r}" class="rail-tile ${s.match.includes(name) ? "on" : ""}" title="${s.label}">
     <span class="rail-ic">${icon(s.ic, 18)}</span><span class="rail-l">${s.label}</span></a>`).join("");
   window.scrollTo(0, 0);
   view.innerHTML = "";
-  await (routes[name] || viewAdd)(arg);
+  await (routes[name] || T.tests)(arg, arg2);
 }
 window.addEventListener("hashchange", go);
 
 // ======================================================================== Add Question
 async function viewAdd() {
   shell("Questions", { label: "Back to Question Bank", href: "#bank" }, questionTabs("add"));
+  const tests = await T.unpublishedTests();
   view.innerHTML = `<div class="card narrow"><div class="card-h"><span class="dot"></span> New Question</div>
+    <div class="qf-grid3 q-into">
+      <label>Add to unpublished test<select class="q-test"><option value="">— Only save to the question bank —</option>
+        ${tests.map((p) => `<option value="${p.id}">${esc(p.test.name)} (${p.questionIds.length}/${p.test.total} Q)</option>`).join("")}</select></label>
+      <label>Test question no.<input class="q-no" type="number" min="1" placeholder="Next free number"></label>
+      <span></span>
+    </div>
     <div id="qform"></div></div>`;
-  const mount = (subject = "", chapter = "") => {
-    const b = blankQuestion();
-    b.subject = subject; b.chapter = chapter;
+  const lastTest = sessionStorage.getItem("ps.addTest");
+  if (lastTest && tests.some((p) => p.id === lastTest)) $(".q-test").value = lastTest;
+  const mount = (keep = {}) => {
+    const b = { ...blankQuestion(), subject: keep.subject || "", chapter: keep.chapter || "", topic: keep.topic || "", level: keep.level || "", track: keep.track || "" };
     mountQuestionForm($("#qform"), b, {
       saveLabel: "Create Question",
-      onSave: async (q) => { await store.saveQuestion(q); toast("Question saved to the bank."); mount(q.subject, q.chapter); },
+      onSave: async (q) => {
+        await store.saveQuestion(q);
+        const tid = $(".q-test").value;
+        try { sessionStorage.setItem("ps.addTest", tid); } catch { /* blocked */ }
+        if (tid) {
+          const at = await T.addToTestById(tid, q, +$(".q-no").value);
+          if (at) {
+            toast(`Question saved and added to the test as Q${at}.`);
+            const t = await store.getPaper(tid);
+            const opt = $(`.q-test option[value="${tid}"]`);
+            if (t && opt) opt.textContent = `${t.test.name} (${t.questionIds.length}/${t.test.total} Q)`;
+          }
+          else toast("Question saved to the bank, but not added to the test.", "err");
+          $(".q-no").value = "";
+        } else toast("Question saved to the bank.");
+        mount(q);
+      },
     });
   };
   mount();
@@ -325,11 +357,12 @@ async function viewPaper(id) {
   QS = await store.getQuestionsByIds(P.questionIds);
   syncSets(P, QS);
   const setMode = (m) => () => { mode = m; draw(); };
-  shell(P.header?.examTitle || P.name, { label: "Back to Papers", href: "#papers" }, [
+  shell(P.header?.examTitle || P.name, { label: "Back to Published Tests", href: "#tests/published", crumbs: ["Tests", P.header?.examTitle || P.name] }, [
     { label: "Question paper", ic: "doc", id: "paper", onClick: setMode("paper") },
     { label: "Answers & Solutions", ic: "layers", id: "solutions", onClick: setMode("solutions") },
     { label: "Key Sheet", ic: "key", id: "keys", onClick: setMode("keys") },
-    { label: "Settings", ic: "gear", id: "settings", onClick: () => settingsModal() },
+    { label: "Print settings", ic: "gear", id: "settings", onClick: () => settingsModal() },
+    ...(P.test ? [{ label: "Test questions", ic: "edit", href: `#test/${P.id}/review` }] : []),
   ]);
   view.innerHTML = `
     <div class="pb-head no-print">

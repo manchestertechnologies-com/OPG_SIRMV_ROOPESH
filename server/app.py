@@ -134,6 +134,13 @@ def wizard_autofetch(body: Picks):
     return _db_call(questions_db.wizard_autofetch, body.picks, body.topics, body.types, body.difficulty)
 
 
+@app.get("/api/tests/bank")
+def tests_bank(db: str, chapter: str, mode: str = "all", value: str = "", limit: int = 50, offset: int = 0):
+    if mode not in ("all", "topic", "type", "difficulty", "random"):
+        raise HTTPException(400, "mode must be all, topic, type, difficulty or random")
+    return _db_call(questions_db.bank_load, db, chapter, mode, value, limit, offset)
+
+
 @app.get("/")
 def index():
     return FileResponse(WEB / "index.html")

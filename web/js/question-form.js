@@ -31,6 +31,11 @@ export function mountQuestionForm(root, q0, opts = {}) {
         <label>Select subject <span class="req">*</span><input name="subject" value="${esc(q.subject)}" placeholder="Mathematics" list="subject-list"></label>
         <label>Select chapter<input name="chapter" value="${esc(q.chapter)}" placeholder="Triangles"></label>
       </div>
+      <div class="qf-grid3">
+        <label>Select topic<input name="topic" value="${esc(q.topic || "")}" placeholder="Topic"></label>
+        <label>Level<select name="level"><option value="">Select level</option><option value="1">L1 · Easy</option><option value="2">L2 · Medium</option><option value="3">L3 · Difficult</option><option value="4">L4 · Very hard</option></select></label>
+        <label>Track<select name="track"><option value="">Select track</option>${[1, 2, 3, 4, 5].map((t) => `<option value="${t}">Track ${t}</option>`).join("")}</select></label>
+      </div>
       <datalist id="subject-list"><option>Mathematics</option><option>Physics</option><option>Chemistry</option><option>Biology</option></datalist>
       <div class="qf-fields"></div>
       <div class="qf-answers"></div>
@@ -43,6 +48,11 @@ export function mountQuestionForm(root, q0, opts = {}) {
     </form>`;
   const form = root.querySelector("form");
   form.type.value = q.type;
+  form.level.value = q.level ? String(q.level) : "";
+  form.track.value = q.track ? String(q.track) : "";
+  form.topic.oninput = (e) => (q.topic = e.target.value.trim());
+  form.level.onchange = (e) => (q.level = e.target.value ? +e.target.value : "");
+  form.track.onchange = (e) => (q.track = e.target.value ? +e.target.value : "");
 
   function field(slot, label, getText, setText, getImgs, target) {
     const wrap = document.createElement("div");

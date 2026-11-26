@@ -175,6 +175,28 @@ def wizard_browse(picks: list[dict], topics: list[str], search: str = "", per_ch
     return out
 
 
+def bank_load(key: str, chapter: str, mode: str = "all", value: str = "", limit: int = 50, offset: int = 0) -> dict:
+    """Test editor, bank questions of one chapter.
+    mode: all | topic (value = topic) | type (value = mcq/ar/match/diag/stmt/numerical)
+          | difficulty (value = easy/medium/hard) | random (limit = how many)."""
+    limit = max(1, min(200, int(limit)))
+    offset = max(0, int(offset))
+    if key not in BY_KEY:
+        raise KeyError(key)
+    if mode == "random":
+        qs = _fetch(key, chapter, [], limit, True)
+        return {"total": len(qs), "questions": qs}
+    if mode == "topic":
+        qs = _fetch(key, chapter, [value] if value else [], 1000, False)
+    else:
+        qs = _fetch(key, chapter, [], 1000, False)
+        if mode == "type" and value:
+            qs = [q for q in qs if q["category"] == value]
+        elif mode == "difficulty" and value:
+            qs = [q for q in qs if (q["difficulty"] or "medium") == value]
+    return {"total": len(qs), "questions": qs[offset: offset + limit]}
+
+
 def wizard_autofetch(quotas: list[dict], topics: list[str], types: dict, difficulty: dict) -> dict:
     """Auto mode. quotas: [{db, chapter, count}]; types: {category: weight}; difficulty: {easy: %, medium: %, hard: %}.
     Draws random candidates per chapter, then picks to follow the type and difficulty split as closely
