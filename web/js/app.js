@@ -8,7 +8,6 @@ import { keySheetPage, fitKeySheet, downloadKeyXlsx } from "./keysheet.js";
 import { generateSets, syncSets, reshuffleSet, swapInSet, moveInSet, keyText, setAnswerFromSet, positionsOf } from "./shuffle.js";
 import { SAMPLE_QUESTIONS } from "./samples.js";
 import { icon } from "./icons.js";
-import { viewWizard } from "./wizard.js";
 import { initTests } from "./tests.js";
 import { viewSyllabus, viewTable } from "./syllabus-table.js";
 
@@ -40,7 +39,6 @@ function modal(title, bodyHTML, { wide } = {}) {
 const SIDE = [
   { r: "tests/unpublished", label: "Tests", ic: "papers", match: ["tests", "test", "paper", "papers"] },
   { r: "bank", label: "Questions", ic: "bank", match: ["add", "bank", "db", "syllabus", "table"] },
-  { r: "create", label: "Auto paper", ic: "doc", match: ["create"] },
 ];
 $("#hamb").innerHTML = icon("menu", 18);
 $("#hamb").onclick = () => document.body.classList.toggle("rail-mini");
@@ -188,7 +186,6 @@ const routes = {
   tests: T.tests, test: T.test, add: viewAdd, bank: viewBank, db: viewDb,
   syllabus: () => viewSyllabus(view, { shell, tabs: questionTabs("syllabus") }),
   table: () => viewTable(view, { shell, tabs: questionTabs("table"), toast }),
-  create: (a) => viewWizard(view, { shell, toast, store, newPaper }),
   papers: () => { location.hash = "tests/published"; }, paper: viewPaper,
 };
 async function go() {
@@ -328,24 +325,6 @@ function newPaper(ids, qs) {
   };
   generateSets(p, qs);
   return p;
-}
-
-// ======================================================================== Papers list
-async function viewPapers() {
-  shell("Papers", { label: "Back to Questions", href: "#add" }, [
-    { label: "All papers", ic: "list", href: "#papers", on: true },
-    { label: "Create paper (step by step)", ic: "doc", href: "#create" },
-    { label: "From the bank", ic: "bank", href: "#bank" },
-  ]);
-  const ps = (await store.listPapers()).sort((a, b) => b.updatedAt - a.updatedAt);
-  view.innerHTML = `<div class="card narrow"><div class="card-h"><span class="dot"></span> Papers
-    <span class="sp"></span><a class="btn btn-blue btn-sm" href="#create">${icon("plus", 14)} Create paper</a></div>
-    <div class="paper-list">${ps.map((p) => `<div class="paper-row"><a href="#paper/${p.id}">${esc(p.header?.examTitle || p.name)}</a>
-      <span class="muted">${esc(p.header?.subject || "")} · ${p.questionIds.length} questions · Sets A-H</span><span class="sp"></span>
-      <button class="btn btn-red btn-xs" data-del="${p.id}">${icon("trash", 11)} Remove</button></div>`).join("") || `<p class="muted">No papers yet. Pick questions in the bank and press "Create paper from selected".</p>`}</div></div>`;
-  view.querySelectorAll("[data-del]").forEach((b) => (b.onclick = async () => {
-    if (confirm("Delete this paper? The questions stay in the bank.")) { await store.deletePaper(b.dataset.del); go(); }
-  }));
 }
 
 // ======================================================================== Paper builder

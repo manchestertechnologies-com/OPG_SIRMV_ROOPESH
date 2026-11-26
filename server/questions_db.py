@@ -113,7 +113,7 @@ def questions(key: str, chapter: str = "", search: str = "", limit: int = 50, of
     return {"total": total, "questions": [to_question(r, src) for r in rows]}
 
 
-# ------------------------------------------------------------------ paper wizard
+# ------------------------------------------------------------------ chapters, topics, test editor
 def keys_for(subject: str, klass: str) -> list[str]:
     """Wizard subject + class -> database keys. Botany / Zoology live in the Biology databases."""
     s = (subject or "").lower()
@@ -167,14 +167,6 @@ def _fetch(key: str, chapter: str, topics: list[str], limit: int, random_order: 
     return [to_question(r, BY_KEY[key]) for r in rows]
 
 
-def wizard_browse(picks: list[dict], topics: list[str], search: str = "", per_chapter: int = 150) -> list[dict]:
-    """Manual mode: questions of the chosen chapters (and concepts), for hand-picking."""
-    out = []
-    for p in picks:
-        out += _fetch(p["db"], p["chapter"], topics, per_chapter, False, search)
-    return out
-
-
 def bank_load(key: str, chapter: str, mode: str = "all", value: str = "", limit: int = 50, offset: int = 0) -> dict:
     """Test editor, bank questions of one chapter.
     mode: all | topic (value = topic) | type (value = mcq/ar/match/diag/stmt/numerical)
@@ -195,51 +187,6 @@ def bank_load(key: str, chapter: str, mode: str = "all", value: str = "", limit:
         elif mode == "difficulty" and value:
             qs = [q for q in qs if (q["difficulty"] or "medium") == value]
     return {"total": len(qs), "questions": qs[offset: offset + limit]}
-
-
-def wizard_autofetch(quotas: list[dict], topics: list[str], types: dict, difficulty: dict) -> dict:
-    """Auto mode. quotas: [{db, chapter, count}]; types: {category: weight}; difficulty: {easy: %, medium: %, hard: %}.
-    Draws random candidates per chapter, then picks to follow the type and difficulty split as closely
-    as the bank allows; the rest of a chapter's quota is filled with any remaining questions."""
-    import random
-    type_w = {k: float(v) for k, v in (types or {}).items() if float(v or 0) > 0}
-    diff_w = {k: float(v) for k, v in (difficulty or {}).items() if float(v or 0) > 0}
-    picked, short = [], []
-    for qu in quotas:
-        n = int(qu.get("count") or 0)
-        if n <= 0:
-            continue
-        cand = _fetch(qu["db"], qu["chapter"], topics, max(40, n * 8), True)
-        if type_w:
-            cand = [q for q in cand if q["category"] in type_w] or cand
-        tq = _split(n, type_w) if type_w else {}
-        dq = _split(n, diff_w) if diff_w else {}
-        chosen, tc, dc = [], {}, {}
-        for strict in (True, False):
-            for q in cand:
-                if len(chosen) >= n or q in chosen:
-                    continue
-                t, d = q["category"], q["difficulty"] or "medium"
-                if strict and ((tq and tc.get(t, 0) >= tq.get(t, 0)) or (dq and d in dq and dc.get(d, 0) >= dq[d])):
-                    continue
-                chosen.append(q)
-                tc[t] = tc.get(t, 0) + 1
-                dc[d] = dc.get(d, 0) + 1
-        random.shuffle(chosen)
-        picked += chosen
-        if len(chosen) < n:
-            short.append({"chapter": qu["chapter"], "wanted": n, "got": len(chosen)})
-    return {"questions": picked, "short": short}
-
-
-def _split(n: int, weights: dict) -> dict:
-    """n into whole numbers in proportion to weights (largest remainder)."""
-    tot = sum(weights.values()) or 1
-    raw = {k: n * w / tot for k, w in weights.items()}
-    out = {k: int(v) for k, v in raw.items()}
-    for k in sorted(raw, key=lambda k: raw[k] - out[k], reverse=True)[: n - sum(out.values())]:
-        out[k] += 1
-    return out
 
 
 # ------------------------------------------------------------------ row -> question

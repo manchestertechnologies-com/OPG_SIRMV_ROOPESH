@@ -107,11 +107,7 @@ def db_questions(key: str, chapter: str = "", search: str = "", limit: int = 50,
 
 
 class Picks(BaseModel):
-    picks: list[dict] = []          # [{db, chapter}] or, for autofetch, [{db, chapter, count}]
-    topics: list[str] = []
-    search: str = ""
-    types: dict = {}
-    difficulty: dict = {}
+    picks: list[dict] = []          # [{db, chapter}]
 
 
 @app.get("/api/wizard/chapters")
@@ -122,16 +118,6 @@ def wizard_chapters(subject: str, klass: str = "Both"):
 @app.post("/api/wizard/topics")
 def wizard_topics(body: Picks):
     return _db_call(questions_db.wizard_topics, body.picks)
-
-
-@app.post("/api/wizard/browse")
-def wizard_browse(body: Picks):
-    return _db_call(questions_db.wizard_browse, body.picks, body.topics, body.search)
-
-
-@app.post("/api/wizard/autofetch")
-def wizard_autofetch(body: Picks):
-    return _db_call(questions_db.wizard_autofetch, body.picks, body.topics, body.types, body.difficulty)
 
 
 @app.get("/api/tests/bank")
